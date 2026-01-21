@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>歴史学習クイズ：極</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@400;500&family=Noto+Serif+JP:wght@700;900&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #2c3e50; --accent: #bdc3c7; --bg: #ffffff; --card: #ffffff; --text: #2c3e50; }
+        /* 初級：桜をイメージした柔らかなピンク */
+        .theme-easy { --primary: #ff85a2; --accent: #ffc2d1; --bg: #fff5f7; --card: #ffffff; --text: #5e3039; font-family: 'Kiwi Maru', serif; }
+        /* 中級：知性を感じさせる落ち着いた紺とグレー */
+        .theme-medium { --primary: #34495e; --accent: #dcdde1; --bg: #f5f6fa; --card: #ffffff; --text: #2f3640; font-family: 'Noto Sans JP', sans-serif; }
+        /* 上級：格式高い鉄紺と黄金 */
+        .theme-hard { --primary: #d4af37; --accent: #3d4e63; --bg: #1a2533; --card: #243040; --text: #e2e8f0; font-family: 'Noto Serif JP', serif; }
+
+        body { background-color: var(--bg); color: var(--text); transition: all 0.5s ease; min-height: 100vh; overflow-x: hidden; }
+        .hint-box { transition: all 0.4s ease; transform: translateY(20px); opacity: 0; display: none; }
+        .hint-box.show { transform: translateY(0); opacity: 1; display: block; }
+        .option-btn { transition: all 0.2s ease; background-color: var(--card); border: 1px solid var(--accent); }
+        .option-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        
+        .theme-hard .option-btn:hover { border-color: #d4af37; background-color: #2c3a4a; }
+        
+        .badge-clear { background: linear-gradient(135deg, #ffd700, #ff8c00); box-shadow: 0 4px 12px rgba(255, 140, 0, 0.4); transform: rotate(-8deg); }
+        .correct-choice { background-color: #10b981 !important; color: white !important; border-color: #10b981 !important; }
+        .wrong-choice { background-color: #ef4444 !important; color: white !important; border-color: #ef4444 !important; }
+        
+        .medal { width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 40px; margin: 0 auto; border: 4px solid rgba(255,255,255,0.3); box-shadow: 0 10px 20px rgba(0,0,0,0.1); transition: 0.5s; }
+        .medal-bronze { background: linear-gradient(135deg, #cd7f32, #a0522d); }
+        .medal-silver { background: linear-gradient(135deg, #c0c0c0, #708090); }
+        .medal-gold { background: linear-gradient(135deg, #ffd700, #daa520); }
+        .medal.locked { background: #e0e0e0; filter: grayscale(1); opacity: 0.2; transform: scale(0.9); }
+        
+        .confetti { position: fixed; pointer-events: none; z-index: 100; animation: fall 3s linear forwards; }
+        @keyframes fall { to { transform: translateY(110vh) rotate(360deg); } }
+
+        .theme-hard .hint-box { border-left-color: #d4af37; border-right: 1px solid rgba(212, 175, 55, 0.1); }
+    </style>
+</head>
+<body id="body-main">
+    <div id="app" class="max-w-4xl mx-auto px-4 py-8">
+        
+        <!-- 1. Difficulty Selection & Rules -->
+        <div id="difficulty-screen" class="text-center py-10">
+            <h1 class="text-5xl md:text-6xl font-black mb-12 tracking-tighter text-slate-800">歴史学習クイズ：極</h1>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                <button onclick="setDifficulty('easy')" class="group bg-white p-8 rounded-3xl shadow-xl border-4 border-pink-50 hover:border-pink-200 transition-all">
+                    <div class="text-5xl mb-4">🌸</div>
+                    <div class="text-xl font-bold text-pink-500">初級編</div>
+                    <p class="text-[10px] mt-2 opacity-60">ヒントが具体的で分かりやすい</p>
+                </button>
+                <button onclick="setDifficulty('medium')" class="group bg-white p-8 rounded-2xl shadow-lg border-2 border-slate-100 hover:border-slate-800 transition-all">
+                    <div class="text-5xl mb-4">🖋️</div>
+                    <div class="text-xl font-bold text-slate-700">中級編</div>
+                    <p class="text-[10px] mt-2 opacity-60">段階的なヒントで知識を試す</p>
+                </button>
+                <button onclick="setDifficulty('hard')" class="group bg-slate-900 p-8 rounded-3xl shadow-2xl border-4 border-slate-800 hover:border-[#d4af37] transition-all">
+                    <div class="text-5xl mb-4">👑</div>
+                    <div class="text-xl font-bold text-[#d4af37]">上級編</div>
+                    <p class="text-[10px] mt-2 opacity-60">格調高い解説から背景を読み解く</p>
+                </button>
+            </div>
+
+            <!-- Rules Section -->
+            <div class="max-w-2xl mx-auto bg-white/50 backdrop-blur-sm rounded-3xl p-8 border border-slate-200 shadow-inner mb-12 text-left">
+                <h3 class="text-xl font-bold text-slate-700 mb-4 flex items-center gap-2">
+                    <span class="bg-slate-800 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm">?</span>
+                    遊び方とルール
+                </h3>
+                <div class="space-y-4 text-sm text-slate-600 leading-relaxed">
+                    <div class="flex gap-4">
+                        <span class="text-xl">①</span>
+                        <p>まずは難易度と挑戦したい「時代」を選択してください。各時代10問のクイズが出題されます。</p>
+                    </div>
+                    <div class="flex gap-4">
+                        <span class="text-xl">②</span>
+                        <p>ヒントを最大3つまで開放できます。少ないヒントで正解を目指しましょう。</p>
+                    </div>
+                    <div class="flex gap-4">
+                        <span class="text-xl">③</span>
+                        <p>10問中 <strong class="text-slate-900">9点以上</strong> を獲得すると、その時代を「制覇（クリア）」となります。</p>
+                    </div>
+                    <div class="flex gap-4 border-t border-slate-100 pt-4 mt-4">
+                        <span class="text-xl">🏆</span>
+                        <div>
+                            <p class="font-bold text-slate-800">デジタルバッジ（メダル）獲得条件：</p>
+                            <p>全10時代をすべて制覇すると、各難易度に応じたメダル（銅・銀・金）が学習記録に授与されます！</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="showRecords()" class="inline-flex items-center gap-2 bg-slate-800 text-white px-8 py-4 rounded-full font-bold hover:bg-slate-700 transition">
+                <span>📊</span> 学習の記録（バッジ一覧）
+            </button>
+        </div>
+
+        <!-- 2. Records/Badges Screen -->
+        <div id="records-screen" class="hidden py-10">
+            <div class="flex items-center justify-between mb-10">
+                <h2 class="text-3xl font-black">学習の記録</h2>
+                <button onclick="backToMenu()" class="text-sm font-bold opacity-50 hover:opacity-100">← メニューに戻る</button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+                <div class="bg-white p-8 rounded-3xl shadow-lg text-center border-2 border-pink-100">
+                    <div id="medal-easy" class="medal medal-bronze locked mb-4">🥉</div>
+                    <h3 class="font-bold text-pink-500 mb-2">初級コンプリート</h3>
+                    <p id="progress-easy" class="text-sm opacity-60">0 / 10 時代クリア</p>
+                </div>
+                <div class="bg-white p-8 rounded-3xl shadow-lg text-center border-2 border-slate-200">
+                    <div id="medal-medium" class="medal medal-silver locked mb-4">🥈</div>
+                    <h3 class="font-bold text-slate-700 mb-2">中級コンプリート</h3>
+                    <p id="progress-medium" class="text-sm opacity-60">0 / 10 時代クリア</p>
+                </div>
+                <div class="bg-white p-8 rounded-3xl shadow-lg text-center border-2 border-indigo-100">
+                    <div id="medal-hard" class="medal medal-gold locked mb-4">🥇</div>
+                    <h3 class="font-bold text-indigo-800 mb-2">上級コンプリート</h3>
+                    <p id="progress-hard" class="text-sm opacity-60">0 / 10 時代クリア</p>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-inner border border-slate-100">
+                <h4 class="font-bold mb-4 opacity-50">各時代のクリア状況</h4>
+                <div id="era-clear-list" class="grid grid-cols-2 md:grid-cols-5 gap-4 text-slate-800"></div>
+            </div>
+        </div>
+
+        <!-- 3. Era Selection -->
+        <div id="era-screen" class="hidden py-10">
+            <div class="flex items-center justify-between mb-10">
+                <h2 class="text-3xl font-black border-l-8 border-[var(--primary)] pl-4">時代を選択</h2>
+                <button onclick="backToMenu()" class="text-sm font-bold opacity-40 hover:opacity-100">← 難易度選択へ</button>
+            </div>
+            <div id="era-grid" class="grid grid-cols-2 md:grid-cols-4 gap-6"></div>
+        </div>
+
+        <!-- 4. Quiz Screen -->
+        <div id="quiz-screen" class="hidden">
+            <div class="flex justify-between items-center mb-8">
+                <button onclick="showEraSelect()" class="text-xs font-bold px-4 py-2 bg-white/10 border border-white/20 rounded-full hover:bg-white/20 transition">中断する</button>
+                <div class="text-right">
+                    <div id="quiz-progress" class="text-3xl font-black italic">01 <span class="text-sm opacity-30">/ 10</span></div>
+                    <div id="quiz-score" class="text-[10px] font-bold text-[var(--primary)] uppercase">Score: 0</div>
+                </div>
+            </div>
+            <div class="bg-[var(--card)] rounded-3xl p-8 md:p-10 shadow-2xl border border-[var(--primary)] border-opacity-30 mb-8 relative overflow-hidden">
+                <div id="era-label-display" class="absolute top-4 left-6 text-[10px] font-black opacity-30 uppercase tracking-widest">---</div>
+                <div class="space-y-4" id="hints-stack">
+                    <div id="h1" class="hint-box p-5 bg-black/5 rounded-xl border-l-4 border-[var(--primary)] shadow-inner"><p id="ht1" class="text-lg font-bold">---</p></div>
+                    <div id="h2" class="hint-box p-5 bg-black/5 rounded-xl border-l-4 border-[var(--primary)] shadow-inner"><p id="ht2" class="text-lg font-bold">---</p></div>
+                    <div id="h3" class="hint-box p-5 bg-black/5 rounded-xl border-l-4 border-[var(--primary)] shadow-inner"><p id="ht3" class="text-lg font-bold">---</p></div>
+                </div>
+                <div id="choices-stack" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8"></div>
+            </div>
+            <div class="flex justify-center">
+                <button id="hint-trigger" onclick="revealHint()" class="bg-[var(--primary)] text-[var(--bg)] px-10 py-3 rounded-full font-black text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-lg">ヒントを出す</button>
+            </div>
+        </div>
+
+        <!-- 5. Result Screen -->
+        <div id="result-screen" class="hidden text-center py-20">
+            <div id="result-visual" class="text-9xl mb-6">🏆</div>
+            <h2 id="result-header" class="text-4xl font-black mb-4">結果発表</h2>
+            <div class="text-6xl font-black mb-8"><span id="result-score-val">0</span><span class="text-xl opacity-30">/10</span></div>
+            <div id="result-msg" class="mb-8 font-bold text-[var(--primary)]"></div>
+            <div class="flex justify-center gap-4">
+                <button onclick="showEraSelect()" class="bg-[var(--primary)] text-[var(--bg)] px-10 py-4 rounded-full font-bold shadow-xl">時代選択へ</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const db = {
+            '古代': [
+                { a: "卑弥呼", t:'p', h: ["魏志倭人伝に記された人物", "邪馬台国の女王", "親魏倭王の称号を得た"] },
+                { a: "三内丸山遺跡", t:'w', h: ["青森県の巨大な縄文集落", "クリの栽培が確認された場所", "大型掘立柱建物跡が残る遺跡"] },
+                { a: "稲作", t:'w', h: ["弥生時代に広まった農耕技術", "食料の安定と階級社会の基", "高床倉庫が作られた理由"] },
+                { a: "土偶", t:'w', h: ["縄文時代の土製の人形", "豊穣を祈るための祭祀具", "女性の形を模した独特な像"] },
+                { a: "竪穴住居", t:'w', h: ["原始時代の代表的な住居", "地面を掘り下げて作られた家", "中央に炉が設けられた住居"] },
+                { a: "吉野ヶ里遺跡", t:'w', h: ["佐賀県の弥生遺跡", "大規模な環濠集落の跡", "物見櫓が復元されている場所"] },
+                { a: "青銅器", t:'w', h: ["銅とスズの合金で作られた道具", "祭祀に使われた銅鐸や銅鏡", "金属器時代の幕開けを告げる道具"] },
+                { a: "貝塚", t:'w', h: ["当時の人々のゴミ捨て場", "縄文時代の食生活が分かる場所", "モースが発見した大森のものが有名"] },
+                { a: "板付遺跡", t:'w', h: ["福岡県の弥生遺跡", "日本最古級の水田跡", "稲作伝来を裏付ける重要な遺跡"] },
+                { a: "屈葬", t:'w', h: ["手足を折り曲げた埋葬方法", "縄文時代に見られる独特な形", "死者の霊を封じる意味があった説"] }
+            ],
+            '飛鳥': [
+                { a: "聖徳太子", t:'p', h: ["推古天皇の摂政", "冠位十二階や憲法十七条を制定", "法隆寺を建立した人物"] },
+                { a: "大化の改新", t:'w', h: ["蘇我氏を倒した政治改革", "公地公民の原則を打ち出した", "中大兄皇子が中心となった改革"] },
+                { a: "法隆寺", t:'w', h: ["飛鳥文化を象徴する寺院", "世界最古の木造建築物", "聖徳太子ゆかりの寺"] },
+                { a: "壬申の乱", t:'w', h: ["古代最大の後継ぎ争い", "大海人皇子が勝利した戦い", "天武天皇が即位するきっかけ"] },
+                { a: "藤原京", t:'w', h: ["日本初の本格的な都城", "条坊制を初めて導入", "持統天皇が遷都した都"] },
+                { a: "白村江の戦い", t:'w', h: ["朝鮮半島での対外戦争", "唐・新羅連合軍に大敗", "九州に防人を配置した原因"] },
+                { a: "冠位十二階", t:'w', h: ["個人の才能を認める役職位", "冠の色で位階を区別した", "家柄に縛られない人材登用"] },
+                { a: "飛鳥文化", t:'w', h: ["日本最古の仏教文化", "大陸の影響を強く受けた文化", "釈迦三尊像などが代表作"] },
+                { a: "中臣鎌足", t:'p', h: ["大化の改新の功労者", "のちに藤原の姓を授かる", "天智天皇を支えた側近"] },
+                { a: "遣隋使", t:'w', h: ["中国（隋）へ送られた使節", "小野妹子が派遣された", "対等な外交を目指した"] }
+            ],
+            '奈良': [
+                { a: "聖武天皇", t:'p', h: ["天平文化の中心人物", "東大寺の大仏を造立", "国分寺・国分尼寺を建立"] },
+                { a: "鑑真", t:'p', h: ["唐から招かれた高僧", "5度の失敗で失明した", "唐招提寺を開いた人物"] },
+                { a: "墾田永年私財法", t:'w', h: ["土地の永久私有を認めた法", "荘園が拡大するきっかけ", "三世一身法の失敗後に制定"] },
+                { a: "平城京", t:'w', h: ["710年に建設された都", "唐の長安を模した壮大な街", "シルクロードの終着駅と呼ばれた"] },
+                { a: "和同開珎", t:'w', h: ["708年から鋳造された貨幣", "唐の貨幣をモデルにした銀銭・銅銭", "蓄銭叙位令で流通を促した"] },
+                { a: "万葉集", t:'w', h: ["日本最古の歌集", "庶民から天皇まで幅広い作者", "山上憶良や大伴家持が有名"] },
+                { a: "正倉院", t:'w', h: ["東大寺にある宝庫", "聖武天皇の愛用品を収蔵", "校倉造で作られた建築"] },
+                { a: "古事記", t:'w', h: ["日本最古の歴史書", "神話から歴史を記したもの", "太安万侶が編纂した"] },
+                { a: "行基", t:'p', h: ["民間に仏教を広めた僧", "大仏建立に協力し大僧正へ", "橋や堤防を作る社会事業も実施"] },
+                { a: "藤原不比等", t:'p', h: ["大宝律令の制定に関与", "藤原氏繁栄の礎を築いた", "中臣鎌足の息子"] }
+            ],
+            '平安': [
+                { a: "藤原道長", t:'p', h: ["摂関政治の全盛期の人物", "「この世をば…」の歌が有名", "娘を次々と中宮にした"] },
+                { a: "紫式部", t:'p', h: ["国風文化を代表する作家", "世界最古の長編小説の著者", "『源氏物語』を書いた人物"] },
+                { a: "白河上皇", t:'p', h: ["院政を開始した最初の人物", "天皇を譲ったあとも実権を保持", "北面の武士を設置した"] },
+                { a: "平等院鳳凰堂", t:'w', h: ["極楽浄土を夢見た建築", "宇治に建てられた阿弥陀堂", "藤原頼通が建立した"] },
+                { a: "国風文化", t:'w', h: ["日本の風土に合った文化", "かな文字の発達が特徴", "寝殿造や十二単が流行した"] },
+                { a: "清少納言", t:'p', h: ["中宮定子に仕えた才女", "日本を代表する随筆の著者", "『枕草子』を書いた人物"] },
+                { a: "空海", t:'p', h: ["真言宗を開いた高僧", "高野山に金剛峯寺を建立", "唐で密教を学んだ弘法大師"] },
+                { a: "最澄", t:'p', h: ["天台宗を開いた高僧", "比叡山に延暦寺を建立", "日本仏教の母山と呼ばれた"] },
+                { a: "保元の乱", t:'w', h: ["朝廷内の争いから起きた内乱", "武士の力が認められる契機", "源氏や平氏が活躍し始めた"] },
+                { a: "荘園", t:'w', h: ["貴族や寺社の私有地", "不輸・不入の権を得て拡大", "武士が現地を管理し始めた土地"] }
+            ],
+            '鎌倉': [
+                { a: "源頼朝", t:'p', h: ["鎌倉幕府を開いた将軍", "守護・地頭を全国に配置", "壇ノ浦で平氏を滅ぼした総大将"] },
+                { a: "北条時宗", t:'p', h: ["モンゴル軍の来襲に対応した執権", "元寇の時の日本代表", "禅宗を信仰したことでも有名"] },
+                { a: "御成敗式目", t:'w', h: ["武士のための最初の法律", "北条泰時が制定した", "公平な裁判を目指した基準"] },
+                { a: "元寇", t:'w', h: ["モンゴル帝国による二度の襲来", "文永の役と弘安の役", "神風の伝説が生まれた戦い"] },
+                { a: "御家人", t:'w', h: ["将軍と主従関係を結んだ武士", "御恩と奉公の義務を負った", "幕府を支える軍事力の核心"] },
+                { a: "北条政子", t:'p', h: ["源頼朝の妻で「尼将軍」", "承久の乱で御家人を鼓舞", "幕府の存続を支えた女性"] },
+                { a: "承久の乱", t:'w', h: ["後鳥羽上皇による倒幕の戦い", "六波羅探題が置かれる原因", "朝廷に対する幕府の優位が確定"] },
+                { a: "徳政令", t:'w', h: ["借金を帳消しにする命令", "元寇後の窮乏した御家人を救う策", "永仁のものが有名だが混乱も招いた"] },
+                { a: "運慶", t:'p', h: ["鎌倉時代を代表する仏師", "東大寺南大門の金剛力士像を作成", "力強く写実的な彫刻スタイル"] },
+                { a: "地頭", t:'w', h: ["荘園や公領を管理する職", "年貢の徴収や警察業務を担当", "鎌倉幕府が設置し武士が就任"] }
+            ],
+            '室町': [
+                { a: "足利義満", t:'p', h: ["金閣（鹿苑寺）を建立", "南北朝を合体させた将軍", "日明貿易（勘合貿易）を開始"] },
+                { a: "足利義政", t:'p', h: ["銀閣（慈照寺）を建立", "東山文化の中心人物", "応仁の乱の時期の将軍"] },
+                { a: "応仁の乱", t:'w', h: ["戦国時代の幕開けとなった内乱", "京都が焼け野原になった戦い", "細川氏と山名氏の争い"] },
+                { a: "勘合貿易", t:'w', h: ["明との正規の貿易", "倭寇と区別するための証票を使用", "足利義満が確立した対外交流"] },
+                { a: "世阿弥", t:'p', h: ["能楽を大成させた人物", "『風姿花伝』を著した", "観阿弥とともに足利義満に重用された"] },
+                { a: "書院造", t:'w', h: ["室町時代に完成した住宅様式", "床の間や違棚が特徴", "現代の和室のルーツ"] },
+                { a: "下剋上", t:'w', h: ["下の者が上の者を倒す風潮", "戦国時代の社会を象徴する言葉", "実力主義が台頭した時代背景"] },
+                { a: "惣村", t:'w', h: ["農民による自治組織", "寄合で村の掟を決定", "室町時代に各地で発達した自警団"] },
+                { a: "一休宗純", t:'p', h: ["室町時代の僧侶", "既成の枠にとらわれない奇行で有名", "アニメのモデルにもなった人物"] },
+                { a: "土一揆", t:'w', h: ["農民による借金帳消しの要求", "徳政令を求めて蜂起した", "正長のものが最初として有名"] }
+            ],
+            '安土': [
+                { a: "織田信長", t:'p', h: ["天下布武を掲げた戦国大名", "楽市楽座や兵農分離を推進", "本能寺の変で亡くなった"] },
+                { a: "豊臣秀吉", t:'p', h: ["足軽から天下人になった「猿」", "太閤検地や刀狩を実施", "大阪城を築城した人物"] },
+                { a: "長篠の戦い", t:'w', h: ["鉄砲隊が騎馬隊を破った戦い", "織田信長の画期的な戦法", "武田勝頼を退けた1575年の戦い"] },
+                { a: "太閤検地", t:'w', h: ["豊臣秀吉による全国の土地調査", "石高制を確立した", "桝の大きさを全国で統一した"] },
+                { a: "刀狩", t:'w', h: ["農民から武器を没収した政策", "一揆の防止と兵農分離が目的", "武士と農民の身分を明確化した"] },
+                { a: "千利休", t:'p', h: ["「わび茶」を大成させた茶聖", "信長や秀吉に仕えた", "黄金の茶室に対して質素な茶を追求"] },
+                { a: "安土桃山文化", t:'w', h: ["豪華絢爛な大名文化", "城郭建築や障壁画が発達", "狩野永徳などの絵師が活躍"] },
+                { a: "本能寺の変", t:'w', h: ["明智光秀による謀反", "織田信長が自害した事件", "天下統一目前での悲劇"] },
+                { a: "南蛮貿易", t:'w', h: ["スペイン、ポルトガルとの貿易", "キリスト教や鉄砲が伝来", "長崎などが拠点となった"] },
+                { a: "石田三成", t:'p', h: ["豊臣秀吉の側近", "関ヶ原の戦いで西軍を率いた", "五奉行の一人として行政を支えた"] }
+            ],
+            '江戸': [
+                { a: "徳川家康", t:'p', h: ["江戸幕府の初代将軍", "関ヶ原の戦いで勝利", "太平の世の基礎を築いた神君"] },
+                { a: "徳川家光", t:'p', h: ["参勤交代を制度化した3代将軍", "鎖国体制を完成させた", "「生まれながらの将軍」と称した"] },
+                { a: "参勤交代", t:'w', h: ["大名を江戸に隔年で住まわせる制度", "大名の経済力を削ぐ統制策", "街道や宿場町が発展するきっかけ"] },
+                { a: "享保の改革", t:'w', h: ["徳川吉宗による幕政再建", "目安箱の設置や新田開発", "米将軍と呼ばれた人物の改革"] },
+                { a: "浮世絵", t:'w', h: ["江戸時代の庶民の風俗画", "葛飾北斎や歌川広重が有名", "多色刷りの錦絵が流行した"] },
+                { a: "解体新書", t:'w', h: ["杉田玄白らが翻訳した解剖学書", "ターヘル・アナトミアを訳したもの", "蘭学の発達を象徴する書物"] },
+                { a: "徳川慶喜", t:'p', h: ["江戸幕府の最後の将軍", "大政奉還を決断した", "幕末の混乱期を収拾しようとした"] },
+                { a: "士農工商", t:'w', h: ["江戸時代の厳しい身分制度", "武士を頂点とした社会構造", "身分による居住地や職業の分離"] },
+                { a: "寺子屋", t:'w', h: ["庶民の子供たちが通った教育施設", "読み書きそろばんを教えた", "日本の高い識字率の背景"] },
+                { a: "伊能忠敬", t:'p', h: ["日本全国を歩いて測量した人物", "精密な日本地図を完成させた", "50歳を過ぎてから測量を始めた"] }
+            ],
+            '明治': [
+                { a: "伊藤博文", t:'p', h: ["初代内閣総理大臣", "大日本帝国憲法の草案を作成", "ハルビンで暗殺された人物"] },
+                { a: "福沢諭吉", t:'p', h: ["『学問のすすめ』の著者", "慶應義塾の創設者", "一万円札の顔としても有名"] },
+                { a: "廃藩置県", t:'w', h: ["藩を廃止し、県を置く改革", "中央集権国家を確立させた", "1871年に断行された重要政策"] },
+                { a: "自由民権運動", t:'w', h: ["国会の開設を求めた政治運動", "板垣退助などが中心となった", "憲法制定の世論を高めた運動"] },
+                { a: "地租改正", t:'w', h: ["土地所有者に地価の3％を納税させる", "政府の収入を安定させた税制改革", "地券が発行された"] },
+                { a: "富岡製糸場", t:'w', h: ["群馬県にある官営模範工場", "フランスの技術を導入した", "日本の近代化と輸出を支えた場所"] },
+                { a: "日清戦争", t:'w', h: ["1894年に清と戦った戦争", "下関条約で勝利を確定", "遼東半島の割譲などを受けた"] },
+                { a: "文明開化", t:'w', h: ["西洋の文化が急速に流入した現象", "ザンギリ頭や牛鍋が流行", "ガス灯や鉄道が普及し始めた"] },
+                { a: "岩倉具視", t:'p', h: ["岩倉使節団の代表として欧米へ", "明治維新の立役者の一人", "五百円札の肖像になった公家出身者"] },
+                { a: "夏目漱石", t:'p', h: ["明治時代を代表する文豪", "『吾輩は猫である』や『こころ』", "イギリスに留学した経験を持つ作家"] }
+            ],
+            '現代': [
+                { a: "吉田茂", t:'p', h: ["戦後復興をリードした首相", "サンフランシスコ平和条約に調印", "「ワンマン宰相」と呼ばれた"] },
+                { a: "日本国憲法", t:'w', h: ["1947年に施行された現行憲法", "平和主義、国民主権、基本的人権", "天皇を日本国の象徴と定めた"] },
+                { a: "高度経済成長", t:'w', h: ["1950年代からの劇的な経済発展", "「もはや戦後ではない」という流行語", "三種の神器などが普及した時代"] },
+                { a: "東京オリンピック", t:'w', h: ["1964年にアジアで初開催", "戦後復興を世界にアピール", "新幹線開通と重なった国家的行事"] },
+                { a: "バブル経済", t:'w', h: ["80年代後半の地価・株価の暴騰", "空前の好景気とその後の崩壊", "「失われた30年」の始まり"] },
+                { a: "田中角栄", t:'p', h: ["日本列島改造論を提唱した首相", "日中国交正常化を実現", "コンピュータ付きブルドーザーの異名"] },
+                { a: "阪神・淡路大震災", t:'w', h: ["1995年に起きた大規模災害", "ボランティア元年と呼ばれた", "高速道路の倒壊などが起きた激震"] },
+                { a: "サンフランシスコ平和条約", t:'w', h: ["日本の独立を回復した講和条約", "1951年に締結された", "同時に日米安全保障条約も調印"] },
+                { a: "昭和天皇", t:'p', h: ["激動の時代を生きた第124代天皇", "終戦時の「人間宣言」が有名", "在位期間が日本史上最長"] },
+                { a: "Jリーグ発足", t:'w', h: ["1993年にプロサッカーリーグが開始", "空前のサッカーブームを巻き起こした", "地域密着型のスポーツ振興を目指した"] }
+            ]
+        };
+
+        const eras = [
+            { id: '古代', name: '縄文・弥生' }, { id: '飛鳥', name: '古墳・飛鳥' },
+            { id: '奈良', name: '奈良時代' }, { id: '平安', name: '平安時代' },
+            { id: '鎌倉', name: '鎌倉時代' }, { id: '室町', name: '室町時代' },
+            { id: '安土', name: '戦国・安土桃山' }, { id: '江戸', name: '江戸時代' },
+            { id: '明治', name: '明治時代' }, { id: '現代', name: '昭和・現代' }
+        ];
+
+        let currentDiff = 'easy';
+        let currentEraId = '';
+        let currentQuizSet = [];
+        let currentIndex = 0;
+        let currentScore = 0;
+        let hintsVisible = 1;
+        let lock = false;
+
+        let clearedRecords = JSON.parse(localStorage.getItem('history_records_final') || '{}');
+
+        function saveRecords() {
+            localStorage.setItem('history_records_final', JSON.stringify(clearedRecords));
+        }
+
+        function setDifficulty(diff) {
+            currentDiff = diff;
+            document.body.className = `theme-${diff}`;
+            document.getElementById('difficulty-screen').classList.add('hidden');
+            showEraSelect();
+        }
+
+        function backToMenu() {
+            document.getElementById('era-screen').classList.add('hidden');
+            document.getElementById('records-screen').classList.add('hidden');
+            document.getElementById('difficulty-screen').classList.remove('hidden');
+            document.body.className = '';
+        }
+
+        function showRecords() {
+            document.getElementById('difficulty-screen').classList.add('hidden');
+            document.getElementById('records-screen').classList.remove('hidden');
+            renderEraList();
+            updateMedals();
+        }
+
+        function renderEraList() {
+            const list = document.getElementById('era-clear-list');
+            list.innerHTML = '';
+            eras.forEach(e => {
+                const item = document.createElement('div');
+                item.className = 'p-3 bg-slate-50 rounded-lg text-[10px] flex flex-col items-center border border-slate-100 shadow-sm';
+                const isEasy = clearedRecords[`easy_${e.id}`];
+                const isMed = clearedRecords[`medium_${e.id}`];
+                const isHard = clearedRecords[`hard_${e.id}`];
+                item.innerHTML = `
+                    <div class="mb-2 font-bold opacity-60">${e.name}</div>
+                    <div class="flex gap-2 text-base">
+                        <span title="初級" class="${isEasy ? 'opacity-100' : 'opacity-10'}" style="filter: drop-shadow(0 0 2px rgba(255,133,162,0.5))">🌸</span>
+                        <span title="中級" class="${isMed ? 'opacity-100' : 'opacity-10'}" style="filter: drop-shadow(0 0 2px rgba(52,73,94,0.5))">🖋️</span>
+                        <span title="上級" class="${isHard ? 'opacity-100' : 'opacity-10'}" style="filter: drop-shadow(0 0 2px rgba(212,175,55,0.8))">👑</span>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function updateMedals() {
+            ['easy', 'medium', 'hard'].forEach(diff => {
+                const count = eras.filter(e => clearedRecords[`${diff}_${e.id}`]).length;
+                document.getElementById(`progress-${diff}`).innerText = `${count} / ${eras.length} クリア`;
+                const medal = document.getElementById(`medal-${diff}`);
+                if (count >= eras.length) medal.classList.remove('locked');
+                else medal.classList.add('locked');
+            });
+        }
+
+        function showEraSelect() {
+            document.getElementById('era-screen').classList.remove('hidden');
+            document.getElementById('quiz-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.add('hidden');
+            const grid = document.getElementById('era-grid');
+            grid.innerHTML = '';
+            eras.forEach(era => {
+                const isCleared = clearedRecords[`${currentDiff}_${era.id}`];
+                const btn = document.createElement('button');
+                btn.className = `relative bg-[var(--card)] p-5 rounded-2xl border border-[var(--accent)] font-bold h-24 flex items-center justify-center transition-all hover:scale-105 shadow-sm hover:shadow-md`;
+                btn.innerHTML = `
+                    <span class="text-sm leading-tight">${era.name}</span>
+                    ${isCleared ? `<div class="badge-clear absolute -top-2 -right-1 px-2 py-0.5 rounded text-[8px] text-white font-black italic">CLEAR</div>` : ''}
+                `;
+                btn.onclick = () => startEra(era.id);
+                grid.appendChild(btn);
+            });
+        }
+
+        function startEra(eraId) {
+            currentEraId = eraId;
+            const pool = db[eraId] || [];
+            currentQuizSet = [...pool].sort(() => Math.random() - 0.5).slice(0, 10);
+            currentIndex = 0; currentScore = 0;
+            document.getElementById('era-screen').classList.add('hidden');
+            document.getElementById('quiz-screen').classList.remove('hidden');
+            document.getElementById('era-label-display').innerText = eraId;
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            lock = false; hintsVisible = 1;
+            const q = currentQuizSet[currentIndex];
+            document.getElementById('quiz-progress').innerHTML = `${String(currentIndex + 1).padStart(2, '0')} <span class="text-sm opacity-30">/ 10</span>`;
+            document.getElementById('quiz-score').innerText = `Score: ${currentScore}`;
+            
+            let h1 = q.h[0], h2 = q.h[1], h3 = q.h[2];
+
+            if (currentDiff === 'hard') {
+                h1 = `【時代背景】 この時代に${q.t==='p'?'活躍した人物':'起きた事柄'}です。当時の社会情勢に深く関わります。`;
+                h2 = `【功績・特徴】 ${q.h[1]}という記録が残されています。`;
+                h3 = `【核心】 ${q.h[2]}に関連しており、後世に多大な影響を与えました。`;
+            } else if (currentDiff === 'medium') {
+                h1 = `【役割】 歴史上、${q.t==='p'?'重要な役職や立場にありました':'非常に大きな影響を与えた出来事です'}。`;
+                h2 = `【詳細】 ${q.h[0]}という面があります。`;
+                h3 = `【核心】 ${q.h[2]}に関連しています。`;
+            }
+
+            document.getElementById('ht1').innerText = h1;
+            document.getElementById('ht2').innerText = h2;
+            document.getElementById('ht3').innerText = h3;
+            document.getElementById('h1').classList.add('show');
+            document.getElementById('h2').classList.remove('show');
+            document.getElementById('h3').classList.remove('show');
+            document.getElementById('hint-trigger').disabled = false;
+            document.getElementById('hint-trigger').style.opacity = "1";
+            generateOptions(q);
+        }
+
+        function revealHint() {
+            if (hintsVisible < 3) {
+                hintsVisible++;
+                document.getElementById(`h${hintsVisible}`).classList.add('show');
+            }
+            if (hintsVisible === 3) {
+                document.getElementById('hint-trigger').disabled = true;
+                document.getElementById('hint-trigger').style.opacity = "0.3";
+            }
+        }
+
+        function generateOptions(target) {
+            const grid = document.getElementById('choices-stack');
+            grid.innerHTML = '';
+            
+            let pool = db[currentEraId]
+                .filter(i => i.a !== target.a)
+                .map(i => i.a);
+            
+            if (pool.length < 3) {
+                Object.values(db).forEach(era => {
+                    era.forEach(item => { if(item.a !== target.a) pool.push(item.a); });
+                });
+            }
+
+            let choices = [target.a, ...pool.sort(() => 0.5 - Math.random()).slice(0, 3)].sort(() => 0.5 - Math.random());
+
+            choices.forEach(choice => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn p-5 rounded-2xl font-bold text-sm h-full min-h-[60px] flex items-center justify-center text-center shadow-sm';
+                btn.innerText = choice;
+                btn.onclick = () => handleChoice(btn, choice, target.a);
+                grid.appendChild(btn);
+            });
+        }
+
+        function handleChoice(btn, selected, correct) {
+            if (lock) return;
+            lock = true;
+            if (selected === correct) {
+                currentScore++;
+                btn.classList.add('correct-choice');
+                if (currentDiff === 'easy') spawnParticles();
+            } else {
+                btn.classList.add('wrong-choice');
+                Array.from(document.querySelectorAll('.option-btn')).forEach(b => {
+                    if (b.innerText === correct) b.classList.add('correct-choice');
+                });
+            }
+            setTimeout(() => {
+                currentIndex++;
+                if (currentIndex < 10) renderQuestion();
+                else showFinal();
+            }, 800);
+        }
+
+        function showFinal() {
+            document.getElementById('quiz-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.remove('hidden');
+            document.getElementById('result-score-val').innerText = currentScore;
+            
+            const msg = document.getElementById('result-msg');
+            if (currentScore >= 9) {
+                document.getElementById('result-visual').innerText = "🏆";
+                msg.innerHTML = `<span class="text-2xl text-orange-500">合格！時代を制覇しました！</span>`;
+                clearedRecords[`${currentDiff}_${currentEraId}`] = true;
+                saveRecords();
+            } else {
+                document.getElementById('result-visual').innerText = "🍵";
+                msg.innerText = "あと一歩！9点以上でクリアです。";
+            }
+        }
+
+        function spawnParticles() {
+            for (let i = 0; i < 15; i++) {
+                const c = document.createElement('div');
+                c.className = 'confetti';
+                c.innerText = "🌸";
+                c.style.left = Math.random() * 100 + 'vw';
+                c.style.top = '-5vh';
+                document.body.appendChild(c);
+                setTimeout(() => c.remove(), 3000);
+            }
+        }
+
+        updateMedals();
+    </script>
+</body>
+</html>
